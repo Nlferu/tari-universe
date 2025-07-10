@@ -25,6 +25,7 @@ declare module '@tauri-apps/api/core' {
         param: 'send_one_sided_to_stealth_address',
         payload: { amount: string; destination: string; paymentId?: string }
     ): Promise<void>;
+    function invoke(param: 'sign_message', payload: { request: string; tapplet_id: number });
     function invoke(
         param: 'set_should_always_use_system_language',
         payload: { shouldAlwaysUseSystemLanguage: boolean }

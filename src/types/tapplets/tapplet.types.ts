@@ -30,6 +30,13 @@ export interface SendOneSidedRequest {
     paymentId?: string;
 }
 
+export interface SignMessageTappletRequest {
+    request: string;
+    tapplet_id: number;
+}
+
+/** @TODO add res type */
+
 export interface BridgeTxDetails {
     amount: string;
     amountToReceive: string;
