@@ -34,7 +34,7 @@ use log::{info, warn};
 use minotari_node_grpc_client::grpc::wallet_client::WalletClient;
 use minotari_node_grpc_client::grpc::{
     GetAllCompletedTransactionsRequest, GetBalanceRequest, GetBalanceResponse, GetStateRequest,
-    ImportTransactionsRequest, NetworkStatusResponse,
+    ImportTransactionsRequest, NetworkStatusResponse, SignMessageRequest, SignMessageResponse,
 };
 use serde::{Serialize, Serializer};
 use std::fs;
@@ -48,6 +48,7 @@ use tari_crypto::ristretto::RistrettoPublicKey;
 use tari_shutdown::Shutdown;
 use tari_utilities::hex::Hex;
 use tokio::sync::watch;
+use tonic::{Request, Response, Status};
 
 #[cfg(target_os = "windows")]
 use crate::utils::windows_setup_utils::add_firewall_rule;
@@ -145,6 +146,30 @@ impl WalletAdapter {
         );
 
         Ok(())
+    }
+
+    pub async fn sign_message(
+        &self,
+        request: Request<SignMessageRequest>,
+        tapplet_id: Option<u64>,
+    ) -> Result<Response<SignMessageResponse>, Status> {
+        let mut client = WalletClient::connect(self.wallet_grpc_address())
+            .await
+            .map_err(|_e| WalletStatusMonitorError::WalletNotStarted)?;
+
+        let mut message = request.into_inner().message;
+
+        if let Some(tapplet_id) = tapplet_id {
+            let tapplet_id_bytes = tapplet_id.to_le_bytes();
+            message.extend_from_slice(&tapplet_id_bytes);
+        }
+
+        let res = client
+            .sign_message(SignMessageRequest { message })
+            .await
+            .map_err(|e| WalletStatusMonitorError::UnknownError(e.into()))?;
+
+        Ok(res)
     }
 
     pub async fn get_transactions(
