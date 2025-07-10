@@ -59,6 +59,8 @@ pub enum WalletManagerError {
     WalletNotStarted,
     #[error("Node manager error: {0}")]
     NodeManagerError(#[from] NodeManagerError),
+    #[error("Signing message error")]
+    SigningMessageError,
     #[error("Unknown error: {0}")]
     UnknownError(#[from] anyhow::Error),
 }

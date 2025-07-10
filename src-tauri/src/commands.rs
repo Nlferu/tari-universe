@@ -60,6 +60,7 @@ use crate::{airdrop, PoolStatus, UniverseAppState, APPLICATION_FOLDER_ID};
 use base64::prelude::*;
 use keyring::Entry;
 use log::{debug, error, info, warn};
+use minotari_node_grpc_client::grpc::{SignMessageRequest, SignMessageResponse};
 use monero_address_creator::Seed as MoneroSeed;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -76,6 +77,7 @@ use tari_core::transactions::tari_amount::{MicroMinotari, Minotari};
 use tauri::ipc::InvokeError;
 use tauri::{Manager, PhysicalPosition, PhysicalSize};
 use tauri_plugin_sentry::sentry;
+use tonic::{Request, Response, Status};
 
 const MAX_ACCEPTABLE_COMMAND_TIME: Duration = Duration::from_secs(1);
 const LOG_TARGET: &str = "tari::universe::commands";
@@ -764,6 +766,31 @@ pub async fn get_airdrop_tokens(
         warn!(target: LOG_TARGET, "get_airdrop_tokens took too long: {:?}", timer.elapsed());
     }
     Ok(airdrop_access_token)
+}
+
+#[tauri::command]
+pub async fn sign_message(
+    state: tauri::State<'_, UniverseAppState>,
+    request: Request<SignMessageRequest>,
+    tapplet_id: Option<u64>,
+) -> Result<Response<SignMessageResponse>, Status> {
+    let timer = Instant::now();
+    let res = state
+        .wallet_manager
+        .sign_message(request, tapplet_id)
+        .await
+        .unwrap_or_else(|e| {
+            if !matches!(e, WalletManagerError::SigningMessageError) {
+                warn!(target: LOG_TARGET, "Error signing message: {}", e);
+            }
+            vec![]
+        });
+
+    if timer.elapsed() > MAX_ACCEPTABLE_COMMAND_TIME {
+        warn!(target: LOG_TARGET, "sign_message took too long: {:?}", timer.elapsed());
+    }
+
+    Ok(res)
 }
 
 #[tauri::command]
